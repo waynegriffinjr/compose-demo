@@ -1,0 +1,17 @@
+# Ignore all git configuration
+.git
+.gitignore
+
+# Ignore markdown files except README.md
+*.md
+!README.md
+
+# Ignore all dependency directories
+node_modules/
+vendor/
+
+# Ignore log files at any depth
+**/*.log
+
+# Ignore local environment configurations
+.env*
