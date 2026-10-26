@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest httpx  # Test dependencies
+          pip install pytest "httpx<0.28"  # Test dependencies
 
       - name: Run tests
         run: python -m pytest tests/ -v --tb=short
