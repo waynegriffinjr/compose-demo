@@ -1,14 +1,22 @@
+
 import os
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
+
 import chromadb
 import requests
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from config import settings
 
 app = FastAPI(title="RAG API")
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 client = chromadb.PersistentClient(path=settings.CHROMA_PATH)
 collection = client.get_or_create_collection(
@@ -16,6 +24,7 @@ collection = client.get_or_create_collection(
 )
 
 DOCS_DIR = settings.DOCS_DIRECTORY
+
 
 def ingest_docs():
     """Load every .txt file in docs/ into the collection (idempotent via upsert)."""
@@ -31,13 +40,16 @@ def ingest_docs():
         collection.upsert(ids=ids, documents=texts, metadatas=[{"source": i} for i in ids])
     return len(ids)
 
+
 @app.on_event("startup")
 def load_docs_on_startup():
     ingest_docs()
 
+
 @app.post("/ingest")
 def ingest():
     return {"ingested": ingest_docs(), "documents": collection.count()}
+
 
 @app.get("/health")
 def health():
@@ -45,14 +57,15 @@ def health():
     try:
         r = requests.get(f"{settings.OLLAMA_URL}/api/tags", timeout=3)
         ollama_ok = r.status_code == 200
-    except:
+    except Exception:
         pass
     return {
         "status": "healthy",
         "ollama": "connected" if ollama_ok else "unavailable",
         "ollama_url": settings.OLLAMA_URL,
-        "documents": collection.count()
+        "documents": collection.count(),
     }
+
 
 @app.get("/")
 def root():
@@ -61,6 +74,7 @@ def root():
 
 class AskRequest(BaseModel):
     question: str
+
 
 @app.post("/ask")
 def ask(req: AskRequest):
@@ -93,6 +107,6 @@ def ask(req: AskRequest):
         r.raise_for_status()
         answer = r.json().get("response", "")
     except requests.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Ollama error: {e}")
+        raise HTTPException(status_code=502, detail=f"Ollama error: {e}") from e
     confidence = "none" if not sources else "high" if sources[0]["distance"] < 0.5 else "medium"
     return {"answer": answer, "sources": sources, "confidence": confidence}
